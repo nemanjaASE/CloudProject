@@ -36,6 +36,11 @@
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\AdministratorService\AdministratorService.csproj" />
+    <ProjectReference Include="..\AuthService\AuthService.csproj" />
+    <ProjectReference Include="..\DocumentService\DocumentService.csproj" />
+    <ProjectReference Include="..\StudentService\StudentService.csproj" />
+    <ProjectReference Include="..\UserService\UserService.csproj" />
     <ProjectReference Include="..\WebApp\WebApp.csproj">
       <ServiceLaunchUrl>http://localhost:{ServicePort}/</ServiceLaunchUrl>
     </ProjectReference>

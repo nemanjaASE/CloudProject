@@ -38,7 +38,15 @@ namespace WebApp
 
                         var builder = WebApplication.CreateBuilder();
 
-                        builder.Services.AddSingleton<StatelessServiceContext>(serviceContext);
+						builder.Services.AddAuthentication("Cookies")
+	                            .AddCookie("Cookies", options =>
+	                    {
+		                    options.LoginPath = "/Auth/Login";
+                            options.LogoutPath = "/Auth/Logout";
+                            options.AccessDeniedPath = "/Auth/AccessDenied";
+                        });
+
+						builder.Services.AddSingleton<StatelessServiceContext>(serviceContext);
                         builder.WebHost
                                     .UseKestrel()
                                     .UseContentRoot(Directory.GetCurrentDirectory())
@@ -46,7 +54,11 @@ namespace WebApp
                                     .UseUrls(url);
                         builder.Services.AddControllersWithViews();
                         var app = builder.Build();
-                        if (!app.Environment.IsDevelopment())
+
+						app.UseAuthentication();
+                        app.UseAuthorization();
+
+						if (!app.Environment.IsDevelopment())
                         {
                         app.UseExceptionHandler("/Home/Error");
                         }
@@ -55,7 +67,7 @@ namespace WebApp
                         app.UseAuthorization();
                         app.MapControllerRoute(
                         name: "default",
-                        pattern: "{controller=Home}/{action=Index}/{id?}");
+                        pattern: "{controller=Auth}/{action=Login}");
                         
                         return app;
 

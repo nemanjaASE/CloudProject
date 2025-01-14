@@ -1,0 +1,40 @@
+﻿@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<h1>Admin Dashboard</h1>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">Users</div>
+                <div class="card-body">
+                    <h5 class="card-title">Manage Users</h5>
+                    <p class="card-text">View, edit, and delete user accounts.</p>
+                    <a href="@Url.Action("ManageUsers", "Admin")" class="btn btn-light">Go</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">System Logs</div>
+                <div class="card-body">
+                    <h5 class="card-title">View Logs</h5>
+                    <p class="card-text">Analyze system activity and logs.</p>
+                    <a href="@Url.Action("ViewLogs", "Admin")" class="btn btn-light">Go</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-danger mb-3">
+                <div class="card-header">Settings</div>
+                <div class="card-body">
+                    <h5 class="card-title">System Settings</h5>
+                    <p class="card-text">Update application settings.</p>
+                    <a href="@Url.Action("Settings", "Admin")" class="btn btn-light">Go</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
