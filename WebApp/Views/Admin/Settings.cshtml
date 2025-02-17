@@ -1,0 +1,152 @@
+﻿@model SettingsViewModel
+
+@{
+    ViewData["Title"] = "Settings";
+}
+
+<head>
+    <style>
+        .note {
+            background-color: #e0f7fa; /* Light blue background */
+            color: #00796b; /* Dark greenish text for contrast */
+            font-style: italic; /* Italicized text */
+            font-size: 0.9rem; /* Slightly smaller font size */
+            padding: 15px; /* Padding around the note */
+            border-radius: 5px; /* Rounded corners for a modern look */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+            margin-bottom: 20px; /* Space below the note */
+        }
+    </style>
+</head>
+
+<h2>Settings</h2>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form asp-action="UpdateSettings" method="post" class="mt-4">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm p-3">
+                <h5 class="card-title">Rate Limit Settings</h5>
+
+                <div class="note">
+                    <strong>Max Attempts:</strong> Defines the maximum number of allowed requests before the user is temporarily blocked.
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Settings.RateLimit.MaxAttempts" class="form-label">Max Attempts:</label>
+                    <input asp-for="Settings.RateLimit.MaxAttempts" type="number" class="form-control" required>
+                    <span asp-validation-for="Settings.RateLimit.MaxAttempts" class="text-danger"></span>
+                </div>
+
+                <div class="note">
+                    <strong>Time Interval:</strong> Specifies the time frame (in hours) within which the maximum number of attempts is counted.
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Settings.RateLimit.TimeInterval" class="form-label">Time Interval [h]:</label>
+                    <input asp-for="Settings.RateLimit.TimeInterval" type="number" class="form-control" required>
+                    <span asp-validation-for="Settings.RateLimit.TimeInterval" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm p-3">
+                <h5 class="card-title">Model Settings</h5>
+
+                <div class="note">
+                    <strong>Temperature:</strong> Controls randomness in model responses. A value of 0 makes responses more deterministic, while a value closer to 2 increases creativity.
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Settings.ModelSettings.Temperature" class="form-label">Temperature (0 - 2):</label>
+                    <input asp-for="Settings.ModelSettings.Temperature" type="number" class="form-control" step="0.1" min="0" max="2" required>
+                    <span asp-validation-for="Settings.ModelSettings.Temperature" class="text-danger"></span>
+                </div>
+
+                <div class="note">
+                    <strong>Max Tokens:</strong> Defines the maximum number of tokens (words and symbols) a model can generate in a single response.
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Settings.ModelSettings.MaxTokens" class="form-label">Max Tokens:</label>
+                    <input asp-for="Settings.ModelSettings.MaxTokens" type="number" class="form-control" required>
+                    <span asp-validation-for="Settings.ModelSettings.MaxTokens" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm p-3 mt-3">
+        <h5 class="card-title">Select Model</h5>
+
+        <div class="note">
+            <strong>Model Selection:</strong> Choose a pre-trained model for text generation. Different models have different capabilities and performance.
+        </div>
+        <label for="Settings.ModelSettings.ModelName" class="form-label">Choose a Model:</label>
+        <select class="form-control" asp-for="Settings.ModelSettings.ModelName">
+            <option value="">Select a Model</option>
+            @foreach (var group in Model.Models)
+            {
+                <optgroup label="@group.GroupName">
+                    @foreach (var item in group.Models)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </optgroup>
+            }
+        </select>
+    </div>
+
+    <div class="card shadow-sm p-3 mt-3">
+        <h5 class="card-title">Additional Requirements</h5>
+
+        <div class="note">
+            <strong>Additional Requirements:</strong> Specify any extra constraints or conditions needed for the model's output.
+        </div>
+
+        <div class="mb-3" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 5px; padding: 10px;">
+            @if (Model.Settings.ModelSettings.AdditionalRequirements != null && Model.Settings.ModelSettings.AdditionalRequirements.Any())
+            {
+                <ul class="list-group">
+                    @for (int i = 0; i < Model.Settings.ModelSettings.AdditionalRequirements.Count; i++)
+                    {
+                        <li class="list-group-item">
+                            <input type="checkbox" name="SelectedRequirementsToRemove" value="@Model.Settings.ModelSettings.AdditionalRequirements[i]">
+                            @Model.Settings.ModelSettings.AdditionalRequirements[i]
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="text-muted">No additional requirements added yet.</p>
+            }
+        </div>
+
+        <div class="input-group mt-2">
+            <input asp-for="NewRequirement" type="text" class="form-control" placeholder="Add new requirement..." optional>
+        </div>
+    </div>
+
+    <div class="text-end mt-4">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save Changes
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

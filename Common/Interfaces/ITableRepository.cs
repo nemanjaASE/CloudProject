@@ -8,7 +8,7 @@ namespace Common.Interfaces
 		Task<T> RetrieveAsync(string tableName, string partitionKey, string rowKey);
 		Task DeleteAsync(string tableName, string partitionKey, string rowKey);
 		Task<IEnumerable<T>> QueryAsync(string tableName, string filter = null);
-		Task<int> GetTotalCountAsync(string tableName);
-		Task<IEnumerable<T>> GetPagedAsync(string tableName,int page, int pageSize);
+		Task<int> GetTotalCountAsync(string tableName, string field = null, string value = null);
+		Task<IEnumerable<T>> GetPagedAsync(string tableName, int page, int pageSize, string field = null, string value = null);
 	}
 }

@@ -1,9 +1,4 @@
 ﻿using Common.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Common.DTO
 {
@@ -13,6 +8,7 @@ namespace Common.DTO
 		public string FileName { get; set; }
 		public string ContentType { get; set; }
 		public DocumentExtension Extension { get; set; }
+		public Guid CourseId { get; set; }
 		public byte[] Content { get; set; }
 	}
 }

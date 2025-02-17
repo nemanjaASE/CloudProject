@@ -2,12 +2,7 @@
 using Microsoft.WindowsAzure.Storage;
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-using Common.Interfaces;
-using System.Net.Mime;
-using System.Reflection.Metadata;
-using System.Data.SqlTypes;
+using Common.Models;
 
 namespace Common.Repositories
 {
@@ -33,7 +28,7 @@ namespace Common.Repositories
 			await container.CreateIfNotExistsAsync();
 		}
 
-		public async Task UploadBlobAsync(string containerName, string blobName, byte[] content, string contentType = null)
+		public async Task UploadBlobAsync(string containerName, string blobName, byte[] content, string courseId, string contentType = null)
 		{
 			var container = GetContainerReference(containerName);
 			await CreateContainerIfNotExistsAsync(containerName);
@@ -44,10 +39,14 @@ namespace Common.Repositories
 				blob.Properties.ContentType = contentType;
 			}
 
+			blob.Metadata["CourseId"] = courseId;
+
 			using (var stream = new MemoryStream(content))
 			{
 				await blob.UploadFromStreamAsync(stream);
 			}
+
+			await blob.SetMetadataAsync();
 		}
 		public async Task<(byte[] Content, string ContentType)> DownloadFileAsBytesAsync(string containerName, string blobName)
 		{
@@ -93,7 +92,7 @@ namespace Common.Repositories
 			}
 		}
 
-		public async Task<Dictionary<string, List<string>>> ListBlobsAsync(string containerName)
+		public async Task<Dictionary<string, List<DocumentRead>>> ListBlobsAsync(string containerName)
 		{
 			var container = GetContainerReference(containerName);
 
@@ -102,7 +101,7 @@ namespace Common.Repositories
 				throw new Exception($"Container '{containerName}' doesn't exists.");
 			}
 
-			var blobNames = new Dictionary<string, List<string>>();
+			var blobNames = new Dictionary<string, List<DocumentRead>>();
 			BlobContinuationToken continuationToken = null;
 
 			do
@@ -113,9 +112,9 @@ namespace Common.Repositories
 				{
 					if (blobItem is CloudBlobDirectory directory)
 					{
-						var blobPaths = ListBlobsInDirectoryAsync(containerName, directory.Prefix);
+						var blobs = ListBlobsInDirectoryAsync(containerName, directory.Prefix);
 
-						blobNames.Add(directory.Prefix, blobPaths.Result);
+						blobNames.Add(directory.Prefix, blobs.Result);
 					}
 				}
 
@@ -125,17 +124,16 @@ namespace Common.Repositories
 			return blobNames;
 		}
 
-		public async Task<List<string>> ListBlobsInDirectoryAsync(string containerName, string directoryPrefix)
+		public async Task<List<DocumentRead>> ListBlobsInDirectoryAsync(string containerName, string directoryPrefix)
 		{
-
 			CloudBlobContainer container = GetContainerReference(containerName);
 
 			if (!await container.ExistsAsync())
 			{
-				throw new Exception($"Container '{containerName}' doesn't exists.");
+				throw new Exception($"Container '{containerName}' doesn't exist.");
 			}
 
-			var blobNames = new List<string>();
+			var blobNames = new List<DocumentRead>();
 			BlobContinuationToken continuationToken = null;
 
 			CloudBlobDirectory directory = container.GetDirectoryReference(directoryPrefix);
@@ -148,7 +146,15 @@ namespace Common.Repositories
 				{
 					if (blobItem is CloudBlockBlob blockBlob)
 					{
-						blobNames.Add(blockBlob.Name);
+						await blockBlob.FetchAttributesAsync();
+
+						blockBlob.Metadata.TryGetValue("CourseId", out string courseId);
+
+						blobNames.Add(new DocumentRead()
+						{
+							BlobPaths = blockBlob.Name,
+							CourseId = courseId ?? null
+						});
 					}
 				}
 

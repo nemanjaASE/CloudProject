@@ -2,218 +2,402 @@
 using Common.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.ServiceFabric.Services.Remoting.Client;
-using Microsoft.ServiceFabric.Services.Remoting.FabricTransport;
-using Microsoft.ServiceFabric.Services.Remoting.V2.FabricTransport.Client;
 using WebApp.Models;
 using Common.Models;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.VisualBasic.FileIO;
 using Common.Enums;
-using System.Runtime.CompilerServices;
-using System.Reflection.Metadata;
+using Common.Helpers;
+using Common.Constants;
+using Common.Guard;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace WebApp.Controllers
 {
+	[Authorize(Roles = Roles.Student)]
 	public class StudentController : Controller
 	{
-		private readonly IStudent _studentService;
-		private static readonly List<string> AllowedExtensions = [".pdf", ".txt"];
+		ServiceClientFactory _proxy;
+		private static readonly List<string> AllowedExtensions = [".pdf", ".txt", ".py"];
 		public StudentController()
 		{
-			var serviceProxyFactory = new ServiceProxyFactory((callbackClient) =>
-			{
-				return new FabricTransportServiceRemotingClientFactory(
-					new FabricTransportRemotingSettings
-					{
-						ExceptionDeserializationTechnique = FabricTransportRemotingSettings.ExceptionDeserialization.Default
-					},
-					callbackClient);
-			});
-
-			var serviceUri = new Uri("fabric:/EduAnalyzer/StudentService");
-			_studentService = serviceProxyFactory.CreateServiceProxy<IStudent>(serviceUri);
+			_proxy = new();
 		}
+		private async Task<IStudent> CreateStudentProxy()
+		{
+			var studentService = await _proxy.CreateServiceProxyAsync<IStudent>(ApiRoutes.StudentService, false);
+
+			Guard.EnsureNotNull(studentService, nameof(studentService));
+
+			return studentService;
+		}
+
 		public IActionResult Index()
 		{
 			return View();
 		}
 
-		[Authorize(Roles = "Student")]
-		public async Task<IActionResult> ManageDocuments()
+		[HttpGet]
+		public async Task<IActionResult> ManageDocuments(int page = 1, int pageSize = 5)
 		{
 			var userId = GetLoggeUserId().Result;
 
-			var result = await _studentService.GetDocumentsForStudent(userId);
+			var _studentService = await CreateStudentProxy();
 
-			if (result is null)
+			try
 			{
-				return View(null);
+				var courses = await _studentService.GetAllCourses();
+
+				if (courses is null || courses.Count.Equals(0))
+				{
+					TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+					Redirect("ManageDocuments");
+				}
+
+				var coursesList = new List<SelectListItem>();
+
+				courses.ForEach(c => coursesList.Add(new SelectListItem()
+				{
+					Value = c.CourseId.ToString(),
+					Text = $"{c.Title} ({c.AuthorName})",
+				}));
+
+				var (documents, numberOfDocuments) = await _studentService.GetDocumentsForStudent(userId, page, pageSize);
+				if (documents is null)
+				{
+					return View(new ManageDocumentsViewModel()
+					{
+						Courses = coursesList,
+						Documents = [],
+						Page = page,
+						PageSize = pageSize,
+						TotalCount = 0,
+					});
+				}
+
+				List<DocumentViewModel> model = [];
+
+				documents.ForEach(doc => model.Add(
+					new DocumentViewModel() { FileName = doc.FileName, Extension = doc.Extension, Version = doc.Version, CourseName = doc.CourseName }));
+
+				return View(new ManageDocumentsViewModel()
+				{
+					Courses = coursesList,
+					Documents = model,
+					Page = page,
+					PageSize = pageSize,
+					TotalCount = numberOfDocuments,
+				});
 			}
-
-			List<DocumentViewModel> documents = [];
-
-			result.ForEach(doc => documents.Add(
-				new DocumentViewModel() { FileName = doc.FileName, Extension = doc.Extension, Version = doc.Version }));
-
-			return View(documents);
+			catch (Exception)
+			{
+				TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+				return Redirect("ManageDocuments");
+			}
 		}
 
-		[Authorize(Roles = "Student")]
 		[HttpGet]
 		public async Task<IActionResult> Review(string fileName, int version, string extension)
 		{
-			var documentModel = new DocumentViewModel { FileName = fileName, Extension = extension, Version = version };
+			var userId = GetLoggeUserId().Result;
 
-			return View(documentModel);
+			try
+			{
+				var _studentService = await CreateStudentProxy();
+
+				var analysis = await _studentService.GetAnalysis(userId, $"{fileName}_{version}.{extension}");
+
+				if (analysis is null)
+				{
+					TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+					return RedirectToAction("ManageDocuments");
+				}
+
+				var progress = await _studentService.GetProgress(userId, fileName);
+
+				var documentModel = new DocumentViewModel { FileName = fileName, Extension = extension, Version = version, Analysis = analysis, ProgressView = progress };
+
+				return View(documentModel);
+			}
+			catch (Exception) 
+			{
+				TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+				return RedirectToAction("ManageDocuments");
+			}
 		}
 
-		[Authorize(Roles = "Student")]
 		[HttpGet]
 		public async Task<IActionResult> Delete(string fileName)
 		{
 			var userId = GetLoggeUserId().Result;
 
-			var isSuccess = await _studentService.DeleteDocument(userId, fileName);
+			var _studentService = await CreateStudentProxy();
 
-			if (isSuccess)
+			try
 			{
-				TempData["SuccessMessage"] = "Document deleted successfully!";
+				var isSuccess = await _studentService.DeleteDocument(userId, fileName);
+
+				if (isSuccess)
+				{
+					TempData[Messages.SuccessMessage] = "Document deleted successfully!";
+				}
+				else
+				{
+					TempData[Messages.ErrorMessage] = "Failed to delete document!";
+				}
+
 				return RedirectToAction("ManageDocuments");
 			}
-
-			TempData["ErrorMessage"] = "Failed to delete document!";
-
-			return RedirectToAction("ManageDocuments");
+			catch (Exception)
+			{
+				TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+				return RedirectToAction("ManageDocuments");
+			}
 		}
 
-		[Authorize(Roles = "Student")]
+		[HttpGet]
+		public async Task<IActionResult> ProgressOverTime()
+		{
+			try
+			{
+				var studentId = GetLoggeUserId().Result;
+
+				var _studentService = await CreateStudentProxy();
+
+				var result = await _studentService.GetProgressAllDocuments(studentId);
+
+
+				var documentModel = new DocumentViewModel { ProgressView = result };
+
+				return View("Progress",documentModel);
+			}
+			catch (Exception)
+			{
+				TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+				return RedirectToAction("ManageDocuments");
+			}
+		}
+
 		[HttpGet]
 		public async Task<IActionResult> Download(string fileName, int version, string extension)
 		{
 			var userId = GetLoggeUserId().Result;
 
-			var (content, contentType) = await _studentService.DownloadDocument(
-				new DocumentInfo() { Extension = extension, FileName = fileName, Version = version}, 
+			var _studentService = await CreateStudentProxy();
+
+			try
+			{
+				var (content, contentType) = await _studentService.DownloadDocument(
+				new DocumentInfo() { Extension = extension, FileName = fileName, Version = version },
 				userId);
 
-			return File(content, contentType);
+				return File(content, contentType);
+			}
+			catch (Exception)
+			{
+				TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+				return RedirectToAction("ManageDocuments");
+			}
 		}
 
 		[HttpPost]
-		[Authorize(Roles = "Student")]
-		public async Task<IActionResult> RollbackVersion(string fileName)
+		public async Task<IActionResult> RollbackVersion(string fileName, int version)
 		{
 			var userId = GetLoggeUserId().Result;
 
-			var success = await _studentService.RollbackToPreviousVersionAsync(userId, fileName);
+			var _studentService = await CreateStudentProxy();
 
-			if (success)
+			try
 			{
-				TempData["Message"] = "Document successfully rolled back to the previous version.";
-				return RedirectToAction("Review", new { fileName });
+				var success = await _studentService.RollbackToPreviousVersionAsync(userId, fileName, version);
+
+				if (success)
+				{
+					TempData[Messages.SuccessMessage] = "Document successfully rolled back to the previous version.";
+				}
+				else
+				{
+					TempData[Messages.ErrorMessage] = "Failed to rollback to the previous version.";
+				}
+
+				return RedirectToAction("ManageDocuments");
 			}
-
-			TempData["Error"] = "Failed to rollback to the previous version.";
-
-			return RedirectToAction("ManageDocuments");
+			catch (Exception)
+			{
+				TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+				return RedirectToAction("ManageDocuments");
+			}
 		}
 
-		[Authorize(Roles = "Student")]
+		[HttpPost]
+		public async Task<IActionResult> AnalyzeManually(string fileName, string extension)
+		{
+			var userId = GetLoggeUserId().Result;
+
+			var _studentService = await CreateStudentProxy();
+
+			try
+			{
+				var (isSuccessfully, estimation) = await _studentService.ProcessDocumentManually(new DocumentDTO()
+				{
+					FileName = fileName,
+					Extension = GetFileTypeFromString(extension),
+					UserId = userId,
+				});
+
+				if (isSuccessfully)
+				{
+					TempData[Messages.SuccessMessage] = $"Document will be analyzed in {estimation}s."; ;
+					return RedirectToAction("ManageDocuments");
+				}
+				else if (!isSuccessfully && estimation.Equals(-1))
+				{
+					TempData[Messages.ErrorMessage] = "Failed to start analyzing document. You reached your limit. Try again later!";
+				}
+				else
+				{
+					TempData[Messages.ErrorMessage] = "Failed to analyze document!";
+				}
+
+				return RedirectToAction("ManageDocuments");
+			}
+			catch (Exception)
+			{
+				TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+				return RedirectToAction("ManageDocuments");
+			}
+		}
+
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> NewVersion(IFormFile file, string fileName, string extension)
 		{
-			if (!IsValidFile(file, out string errorMessage))
+			try
 			{
-				TempData["ErrorMessage"] = errorMessage;
-				return RedirectToAction("ManageDocuments");
-			}
-
-			if (!CompareFiles(Path.GetExtension(file.FileName).Split('.')[1].ToLower(), Path.GetFileNameWithoutExtension(file.FileName), extension, fileName, out errorMessage))
-			{
-				TempData["ErrorMessage"] = errorMessage;
-				return RedirectToAction("ManageDocuments");
-			}
-
-			bool isSuccess = false;
-			var userId = GetLoggeUserId().Result;
-			var contentType = file.ContentType;
-
-			using (var stream = file.OpenReadStream())
-			{
-				var fileBytes = await ConvertStreamToByteArrayAsync(stream);
-				isSuccess = await _studentService.ProcessNewVersionAsync(new DocumentDTO()
+				if (!IsValidFile(file, out string errorMessage))
 				{
-					FileName = fileName,
-					Extension = GetFileTypeFromString(extension),
-					ContentType = contentType,
-					Content = fileBytes,
-					UserId = userId,
-				});
-			}
+					TempData[Messages.ErrorMessage] = errorMessage;
+					return RedirectToAction("ManageDocuments");
+				}
 
-			if (isSuccess)
+				if (!CompareFiles(Path.GetExtension(file.FileName).Split('.')[1].ToLower(), Path.GetFileNameWithoutExtension(file.FileName), extension, fileName, out errorMessage))
+				{
+					TempData[Messages.ErrorMessage] = errorMessage;
+					return RedirectToAction("ManageDocuments");
+				}
+
+				var _studentService = await CreateStudentProxy();
+
+				bool isSuccessfully = false;
+				var userId = GetLoggeUserId().Result;
+				var contentType = file.ContentType;
+				double estimation = 0;
+
+				using (var stream = file.OpenReadStream())
+				{
+					var fileBytes = await ConvertStreamToByteArrayAsync(stream);
+					(isSuccessfully, estimation) = await _studentService.ProcessNewVersionAsync(new DocumentDTO()
+					{
+						FileName = fileName,
+						Extension = GetFileTypeFromString(extension),
+						ContentType = contentType,
+						Content = fileBytes,
+						UserId = userId,
+					});
+				}
+
+				if (isSuccessfully)
+				{
+					TempData[Messages.SuccessMessage] = $"New version of document uploaded successfully! Document will be analyzed in {estimation}s.";
+					return RedirectToAction("ManageDocuments");
+				}
+				else if (!isSuccessfully && estimation.Equals(-1))
+				{
+					TempData[Messages.ErrorMessage] = "Failed to upload new version of document. You reached your limit. Try again later!";
+				}
+				else
+				{
+					TempData[Messages.ErrorMessage] = "Failed to upload new version of document!";
+				}
+
+				return RedirectToAction("ManageDocuments");
+			}
+			catch (Exception)
 			{
-				TempData["SuccessMessage"] = "New version of document uploaded successfully!";
-				return RedirectToAction("ManageDocuments", "Student");
+				TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+				return RedirectToAction("ManageDocuments");
 			}
-
-			TempData["ErrorMessage"] = "Failed to upload new version of document!";
-
-			return RedirectToAction("ManageDocuments", "Student");
 		}
 
-		[Authorize(Roles = "Student")]
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public async Task<IActionResult> Upload(IFormFile file)
+		public async Task<IActionResult> Upload(IFormFile file, string selectedCourse)
 		{
-			if (!IsValidFile(file, out string errorMessage))
+			try
 			{
-				TempData["ErrorMessage"] = errorMessage;
-				return RedirectToAction("ManageDocuments");
-			}
-
-			var fileName = Path.GetFileNameWithoutExtension(file.FileName);
-
-			var userId = GetLoggeUserId().Result;
-			var extension = GetFileTypeFromString(Path.GetExtension(file.FileName).ToLower());
-			var contentType = file.ContentType;
-
-			bool isSuccess = false;
-
-			using (var stream = file.OpenReadStream())
-			{	
-				var fileBytes = await ConvertStreamToByteArrayAsync(stream);
-				isSuccess = await _studentService.ProcessDocumentAsync(new DocumentDTO()
+				if (!IsValidFile(file, out string errorMessage))
 				{
-					FileName = fileName,
-					Extension = extension,
-					ContentType = contentType,
-					Content = fileBytes,
-					UserId = userId,
-				});
-			}
+					TempData[Messages.ErrorMessage] = errorMessage;
+					return RedirectToAction("ManageDocuments");
+				}
 
-			if (isSuccess)
-			{
-				TempData["SuccessMessage"] = "Document uploaded successfully!";
+				if (selectedCourse is null)
+				{
+					TempData[Messages.ErrorMessage] = "Select a course name!";
+					return RedirectToAction("ManageDocuments");
+				}
+
+				var _studentService = await CreateStudentProxy();
+
+				var fileName = Path.GetFileNameWithoutExtension(file.FileName);
+
+				var userId = GetLoggeUserId().Result;
+				var extension = GetFileTypeFromString(Path.GetExtension(file.FileName).ToLower());
+				var contentType = file.ContentType;
+
+				bool isSuccessfully = false;
+				double estimation = 0;
+
+				using (var stream = file.OpenReadStream())
+				{
+					var fileBytes = await ConvertStreamToByteArrayAsync(stream);
+					(isSuccessfully, estimation) = await _studentService.ProcessDocumentAsync(new DocumentDTO()
+					{
+						FileName = fileName,
+						Extension = extension,
+						ContentType = contentType,
+						Content = fileBytes,
+						UserId = userId,
+						CourseId = Guid.Parse(selectedCourse),
+					});
+				}
+
+				if (isSuccessfully)
+				{
+					TempData[Messages.SuccessMessage] = $"Document uploaded successfully! Document will be analyzed in {estimation}s.";
+					return RedirectToAction("ManageDocuments");
+				}
+				else if (!isSuccessfully && estimation.Equals(-1))
+				{
+					TempData[Messages.ErrorMessage] = "Failed to start analyzing document. You reached your limit. Try again later!";
+				}
+				else
+				{
+					TempData[Messages.ErrorMessage] = "Failed to upload document!";
+				}
+
 				return RedirectToAction("ManageDocuments");
 			}
-	
-			TempData["ErrorMessage"] = "Failed to upload document!";
-
-			return RedirectToAction("ManageDocuments", "Student");
+			catch (Exception)
+			{
+				TempData[Messages.ErrorMessage] = "Some error occured. Please contact administrator.";
+				return RedirectToAction("ManageDocuments");
+			}
 		}
 
 		private static async Task<byte[]> ConvertStreamToByteArrayAsync(Stream stream)
 		{
-			using (var memoryStream = new MemoryStream())
-			{
-				await stream.CopyToAsync(memoryStream);
-				return memoryStream.ToArray();
-			}
+			using var memoryStream = new MemoryStream();
+			await stream.CopyToAsync(memoryStream);
+			return memoryStream.ToArray();
 		}
 		private async Task<Guid> GetLoggeUserId()
 		{
@@ -262,6 +446,11 @@ namespace WebApp.Controllers
 		}
 		private static DocumentExtension GetFileTypeFromString(string fileExtension)
 		{
+			if (fileExtension.StartsWith("."))
+			{
+				fileExtension = fileExtension.Substring(1);
+			}
+
 			Enum.TryParse(fileExtension, ignoreCase: true, out DocumentExtension fileType);
 			return fileType;
 		}

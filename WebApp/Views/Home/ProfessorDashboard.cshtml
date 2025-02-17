@@ -1,0 +1,38 @@
+﻿@{
+    ViewData["Title"] = "Professor Dashboard";
+}
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">Users</div>
+                <div class="card-body">
+                    <h5 class="card-title">Students Analyses</h5>
+                    <p class="card-text">View, edit, and comment on student analyses.</p>
+                    <a href="@Url.Action("ManageAnalyses", "Professor")" class="btn btn-light">Go</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Courses</div>
+                <div class="card-body">
+                    <h5 class="card-title">Courses</h5>
+                    <p class="card-text">View, edit, and delete courses.</p>
+                    <a href="@Url.Action("ManageCourses", "Professor")" class="btn btn-light">Go</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-secondary mb-3">
+                <div class="card-header">Student Progress</div>
+                <div class="card-body">
+                    <h5 class="card-title">Student Progress</h5>
+                    <p class="card-text">View progress.</p>
+                    <a href="@Url.Action("ViewProgress", "Professor")" class="btn btn-light">Go</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

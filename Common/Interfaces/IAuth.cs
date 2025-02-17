@@ -5,6 +5,7 @@ namespace Common.Interfaces
 {
 	public interface IAuth : IService
 	{
-		Task<LoggedUserDTO> Login(UserLoginDTO user);
+		Task<bool> ChangePassword(Guid userId, string newPassword);
+		Task<LoggedUserDTO?> Login(UserLoginDTO user);
 	}
 }

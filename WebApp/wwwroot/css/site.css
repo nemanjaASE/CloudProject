@@ -18,5 +18,30 @@ html {
 }
 
 body {
-  margin-bottom: 60px;
+    margin-bottom: 60px;
+    background-color: #f9f9f9;
+}
+
+.progress-vertical-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    height: 200px; /* Maksimalna visina kontejnera */
+    width: 100%;
+    gap: 15px;
+}
+
+.progress-vertical {
+    width: 40px; /* Širina stupca */
+    background-color: #007bff;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: height 0.5s ease;
+}
+
+.progress-label {
+    font-size: 12px;
+    font-weight: bold;
 }

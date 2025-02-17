@@ -1,0 +1,124 @@
+﻿@model DocumentViewModel
+
+@{
+    ViewData["Title"] = "Review Document";
+}
+
+<div class="card">
+    <div class="card-header">
+        <h3>Document Analysis</h3>
+    </div>
+
+    <ul class="nav nav-tabs" id="documentTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="details-tab" data-bs-toggle="tab" href="#details" role="tab" aria-controls="details" aria-selected="true">Document Details</a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link" id="progress-tab" data-bs-toggle="tab" href="#progress" role="tab" aria-controls="progress" aria-selected="false">Progress</a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="documentTabsContent">
+        <div class="tab-pane fade show active" id="details" role="tabpanel" aria-labelledby="details-tab">
+            <div class="card-body">
+                <p><strong>File Name:</strong> @Model.FileName</p>
+                <p><strong>Version:</strong> @Model.Version</p>
+                <p><strong>Extension:</strong> @Model.Extension</p>
+            </div>
+            <hr class="m-0">
+            <div class="card-body">
+                <p>
+                    <strong>Status:</strong> @Model.Analysis?.Status
+                </p>
+                <p><strong>Analyze time: </strong> @Model.Analysis?.ProcessingTimeS s</p>
+                <p><strong>Score:</strong> @Model.Analysis?.Score / 10</p>
+                <p><strong>Last update:</strong> @Model.Analysis.DateTime.ToString()</p>
+                <p><strong>Improvements:</strong></p>
+                @if (Model.Analysis != null && Model.Analysis.PotentialImprovements?.Any() == true)
+                {
+                    <div class="improvements-list">
+                        <ul class="list-group">
+                            @for (int i = 0; i < Model.Analysis.PotentialImprovements.Count; i++)
+                            {
+                                <li class="list-group-item">
+                                    <div>
+                                        <strong>@(i + 1). Suggestion:</strong>
+                                        <span>@Model.Analysis.PotentialImprovements[i].Suggestion</span>
+                                    </div>
+                                    <div class="text-muted">
+                                        <strong>Location:</strong>
+                                        <span>@Model.Analysis.PotentialImprovements[i].Location</span>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No improvements found.</p>
+                }
+                <p><strong>References:</strong></p>
+                @if (Model.Analysis != null && Model.Analysis.References?.Any() == true)
+                {
+                    <div class="references-list">
+                        <ul class="list-group">
+                            @for (int i = 0; i < Model.Analysis.References.Count; i++)
+                            {
+                                <li class="list-group-item">
+                                    <div>
+                                        <strong>@(i + 1). Title:</strong>
+                                        <span>@Model.Analysis.References[i].Title</span>
+                                    </div>
+                                    <div class="text-muted">
+                                        <strong>Author:</strong>
+                                        <span>@Model.Analysis.References[i].Author</span>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No references found.</p>
+                }
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="progress" role="tabpanel" aria-labelledby="progress-tab">
+            <div class="card-body">
+                <h5>Progress Over Time</h5>
+
+                @if (Model.ProgressView != null && Model.ProgressView.Progress.Any())
+                {
+                    @foreach (var entry in Model.ProgressView.Progress)
+                    {
+                        var progressPercentage = entry.Score * 10;
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">@entry.AnalysisDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm") File Version: @entry.DocumentVersion</span>
+                                <span>@entry.Score / 10</span>
+                                <span class="text-muted">Recommendations: @entry.SuggestionCount</span>
+                            </div>
+                            <div class="progress">
+                                <div class="progress-bar" role="progressbar" style="width: @progressPercentage%" aria-valuenow="@progressPercentage" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    }
+                    <div>
+                        <span><strong>Average Score: @Model.ProgressView.AverageScore / 10</strong></span>
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No progress data available.</p>
+                }
+            </div>
+        </div>
+
+    </div>
+
+    <a asp-action="ManageDocuments" class="btn btn-secondary mt-3">Back to Documents</a>
+</div>

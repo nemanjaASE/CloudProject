@@ -1,6 +1,5 @@
 ﻿using Common.Models;
 using Microsoft.ServiceFabric.Services.Remoting;
-using Microsoft.WindowsAzure.Storage.Table;
 
 namespace Common.Interfaces
 {
@@ -15,5 +14,7 @@ namespace Common.Interfaces
 		Task<bool> DeleteUser(Guid id);
 		Task<bool> UpdateUser(User user);
 		Task<(List<User>, int)> GetUsersPaged(int page, int pageSize);
+		Task<(List<User>, int)> GetStudentsPaged(int page, int pageSize);
+		Task<(string, string)> GetUserName(Guid id);
 	}
 }

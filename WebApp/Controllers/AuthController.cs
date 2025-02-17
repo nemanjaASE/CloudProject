@@ -2,36 +2,31 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using Microsoft.ServiceFabric.Services.Remoting.Client;
-using Microsoft.ServiceFabric.Services.Remoting.V2.FabricTransport.Client;
-using Microsoft.ServiceFabric.Services.Remoting.FabricTransport;
 using Common.Interfaces;
 using Common.DTO;
 using Common.Enums;
-using System.ComponentModel.DataAnnotations;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
+using Common.Helpers;
+using Common.Constants;
+using Common.Guard;
 
 namespace WebApp.Controllers
 {
 	public class AuthController : Controller
 	{
-		private readonly IAuth _authService;
-
+		ServiceClientFactory? _proxy;
 		public AuthController()
 		{
-			var serviceProxyFactory = new ServiceProxyFactory((callbackClient) =>
-			{
-				return new FabricTransportServiceRemotingClientFactory(
-					new FabricTransportRemotingSettings
-					{
-						ExceptionDeserializationTechnique = FabricTransportRemotingSettings.ExceptionDeserialization.Default
-					},
-					callbackClient);
-			});
+			_proxy = new();
+		}
 
-			var serviceUri = new Uri("fabric:/EduAnalyzer/AuthService");
-			_authService = serviceProxyFactory.CreateServiceProxy<IAuth>(serviceUri);
+		private async Task<IAuth> CreateAuthProxy()
+		{
+			var authService = await _proxy.CreateServiceProxyAsync<IAuth>(ApiRoutes.AuthService, false);
+
+			Guard.EnsureNotNull(authService, nameof(authService));
+
+			return authService;
 		}
 
 		[AllowAnonymous]
@@ -48,6 +43,8 @@ namespace WebApp.Controllers
 			{
 				return View(model);
 			}
+
+			var _authService = await CreateAuthProxy();
 
 			LoggedUserDTO loggedUser = await _authService.Login(new UserLoginDTO()
 			{
@@ -77,14 +74,14 @@ namespace WebApp.Controllers
 				}
 				else if (loggedUser.Role.Equals(UserRole.Professor)){
 
-					return RedirectToAction("ProfesorDashboard", "Home");
+					return RedirectToAction("ProfessorDashboard", "Home");
 				} else
 				{
 					return RedirectToAction("StudentDashboard", "Home");
 				}
 			}
 
-			ViewData["ErrorMessage"] = "Wrong email or password.";
+			ViewData[Messages.ErrorMessage] = "Wrong email or password.";
 			return View(model);
 		}
 

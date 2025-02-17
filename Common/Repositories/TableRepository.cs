@@ -21,11 +21,17 @@ namespace Common.Repositories
 			var table = _tableClient.GetTableReference(tableName);
 			return table;
 		}
-		public async Task<IEnumerable<T>> GetPagedAsync(string tableName,int page, int pageSize)
+		public async Task<IEnumerable<T>> GetPagedAsync(string tableName, int page, int pageSize,string field = null, string value = null)
 		{
 			var table = GetTableReference(tableName);
 
 			var query = new TableQuery<T>().Take(pageSize);
+
+			if (!string.IsNullOrEmpty(field) && !string.IsNullOrEmpty(value))
+			{
+				string filter = TableQuery.GenerateFilterCondition(field, QueryComparisons.Equal, value);
+				query = query.Where(filter);
+			}
 
 			TableContinuationToken continuationToken = null;
 			var users = new List<T>();
@@ -45,15 +51,21 @@ namespace Common.Repositories
 				currentPage++;
 			} while (continuationToken != null && currentPage <= page);
 
-
 			return users;
 		}
-		public async Task<int> GetTotalCountAsync(string tableName)
+
+		public async Task<int> GetTotalCountAsync(string tableName, string field = null, string value = null)
 		{
 			var table = GetTableReference(tableName);
 
 			var query = new TableQuery<UserEntity>().Select(new[] { "PartitionKey" });
 			TableContinuationToken continuationToken = null;
+
+			if (!string.IsNullOrEmpty(field) && !string.IsNullOrEmpty(value))
+			{
+				string filter = TableQuery.GenerateFilterCondition(field, QueryComparisons.Equal, value);
+				query = query.Where(filter);
+			}
 
 			int count = 0;
 			do

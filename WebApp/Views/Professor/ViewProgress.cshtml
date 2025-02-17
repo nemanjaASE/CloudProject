@@ -1,0 +1,46 @@
+﻿@model CourseFilterViewModel
+
+@{
+    ViewData["Title"] = "Report";
+}
+
+<h1 class="mt-4">Report</h1>
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<form asp-action="GenerateReport" method="post" class="mb-3">
+    <div class="row">
+        <div class="col-md-4">
+            <label for="startDate" class="form-label">Start Date</label>
+            <input type="date" class="form-control" id="startDate" asp-for="StartDate">
+        </div>
+
+        <div class="col-md-4">
+            <label for="endDate" class="form-label">End Date</label>
+            <input type="date" class="form-control" id="endDate" asp-for="EndDate">
+        </div>
+
+        <div class="col-md-4">
+            <label for="courseName" class="form-label">Course Name</label>
+            <select class="form-control" id="courseName" asp-for="SelectedCourse" asp-items="Model.Courses">
+                <option value="">-- Select a Course --</option>
+            </select>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3">Generate report</button>
+</form>

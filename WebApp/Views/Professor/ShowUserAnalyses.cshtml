@@ -1,0 +1,78 @@
+﻿@model List<DocumentViewModel>
+
+@{
+    ViewData["Title"] = "Student Documents";
+}
+
+<h1 class="mt-4">Student Documents</h1>
+
+
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<table class="table table-striped mt-4">
+    <thead class="thead-dark">
+        <tr>
+            <th>#</th>
+            <th>File Name</th>
+            <th>Version</th>
+            <th>Extension</th>
+            <th>Course Name</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model != null && Model.Any())
+        {
+            int count = 1;
+            foreach (var document in Model)
+            {
+                <tr>
+                    <td>@count</td>
+                    <td>@document.FileName</td>
+                    <td>@document.Version.0</td>
+                    <td>@document.Extension</td>
+                    <td>@document.CourseName</td>
+                    <td>
+                        <a asp-action="Download"
+                           asp-route-fileName="@document.FileName"
+                           asp-route-version="@document.Version"
+                           asp-route-extension="@document.Extension"
+                           asp-route-userId="@document.StudentId" class="btn btn-sm btn-warning" target="_blank">
+                            Download
+                        </a>
+                        <a asp-action="Review"
+                           asp-route-fileName="@document.FileName"
+                           asp-route-version="@document.Version"
+                           asp-route-extension="@document.Extension"
+                           asp-route-userId="@document.StudentId"  class="btn btn-sm btn-warning">
+                            Review
+                        </a>
+                    </td>
+                </tr>
+                count++;
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="5" class="text-center">No documents found.</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<a asp-action="ManageAnalyses" class="btn btn-secondary mt-3">Back to Students</a>

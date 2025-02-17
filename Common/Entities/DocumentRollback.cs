@@ -11,5 +11,6 @@ namespace Common.Entities
 		public string BlobPath { get; set; }
 		public byte[] Content { get; set; } 
 		public string ContentType { get; set; }
+		public string CourseId { get; set; }
 	}
 }

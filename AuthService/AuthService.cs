@@ -1,43 +1,24 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.Fabric;
+using Common.Constants;
 using Common.DTO;
-using Common.Enums;
+using Common.Guard;
 using Common.Helpers;
 using Common.Interfaces;
 using Common.Models;
-using Microsoft.ServiceFabric.Services.Client;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
-using Microsoft.ServiceFabric.Services.Remoting.Client;
-using Microsoft.ServiceFabric.Services.Remoting.FabricTransport;
 using Microsoft.ServiceFabric.Services.Remoting.FabricTransport.Runtime;
-using Microsoft.ServiceFabric.Services.Remoting.V2.FabricTransport.Client;
 using Microsoft.ServiceFabric.Services.Remoting.V2.FabricTransport.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 
 namespace AuthService
 {
-	public class AuthService : StatelessService, IAuth
+	public class AuthService(StatelessServiceContext context) : StatelessService(context), IAuth
     {
-		private readonly IUser _userService;
-        public AuthService(StatelessServiceContext context)
-            : base(context)
-        {
-			var serviceProxyFactory = new ServiceProxyFactory((callbackClient) =>
-			{
-				return new FabricTransportServiceRemotingClientFactory(
-					new FabricTransportRemotingSettings
-					{
-						ExceptionDeserializationTechnique = FabricTransportRemotingSettings.ExceptionDeserialization.Default
-					}, callbackClient);
-			});
+		private IUser? _userService;
+		private readonly ServiceClientFactory _factory = new();
 
-			var serviceUri = new Uri("fabric:/EduAnalyzer/UserService");
-
-			_userService = serviceProxyFactory.CreateServiceProxy<IUser>(serviceUri, new ServicePartitionKey(0));
-		}
-
-		public async Task<LoggedUserDTO> Login(UserLoginDTO user)
+		public async Task<LoggedUserDTO?> Login(UserLoginDTO user)
 		{
 			if (user == null) { return null; }
 
@@ -45,27 +26,51 @@ namespace AuthService
 
 			if (!new EmailAddressAttribute().IsValid(user.Email)) { return null; }
 
-			User retrievedUser = await _userService.GetUserByEmail(user.Email);
-
-			if (retrievedUser is null) { return null; }
-
-			if(!PasswordHasher.VerifyPassword(user.Password, retrievedUser.Password))
+			try
 			{
-				return null;
+				User retrievedUser = await _userService.GetUserByEmail(user.Email);
+
+				if (retrievedUser is null) { return null; }
+
+				if(!PasswordHasher.VerifyPassword(user.Password, retrievedUser.Password))
+				{
+					return null;
+				}
+
+				return new LoggedUserDTO()
+				{
+					Role = retrievedUser.Role,
+					UserId = retrievedUser.Id,
+				};
 			}
-
-			return new LoggedUserDTO()
+			catch (Exception)
 			{
-				Role = retrievedUser.Role,
-				UserId = retrievedUser.Id,
-			};
+				throw;
+			}
+		}
+		public async Task<bool> ChangePassword(Guid userId, string newPassword)
+		{
+			try
+			{
+				var user = await _userService.GetUserById(userId);
+
+				if (user is null) { return false; }
+
+				user.Password = PasswordHasher.HashPassword(newPassword);
+
+				return await _userService.UpdateUser(user);
+			}
+			catch (Exception e)
+			{
+				throw new Exception(e.Message);
+			}
 		}
 
 		protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
         {
-			return new List<ServiceInstanceListener>
-			{
-				new ServiceInstanceListener(serviceContext =>
+			return
+			[
+				new(serviceContext =>
 					new FabricTransportServiceRemotingListener(
 						serviceContext,
 						this,
@@ -74,21 +79,13 @@ namespace AuthService
 								ExceptionSerializationTechnique = FabricTransportRemotingListenerSettings.ExceptionSerialization.Default,
 							}),
 						"ServiceEndpointV2")
-			};
+			];
 		}
-        protected override async Task RunAsync(CancellationToken cancellationToken)
-        {
 
-            long iterations = 0;
-
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                ServiceEventSource.Current.ServiceMessage(this.Context, "Working-{0}", ++iterations);
-
-                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
-            }
-        }
-    }
+		protected override async Task RunAsync(CancellationToken cancellationToken)
+		{
+			_userService = await _factory.CreateServiceProxyAsync<IUser>(ApiRoutes.UserService, true);
+			Guard.EnsureNotNull(_userService, nameof(_userService));
+		}
+	}
 }

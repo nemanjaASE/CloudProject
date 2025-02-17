@@ -2,8 +2,6 @@
     ViewData["Title"] = "Student Dashboard";
 }
 
-<h1>Student Dashboard</h1>
-
 <div class="container mt-4">
     <div class="row">
         <div class="col-md-4">
@@ -13,6 +11,16 @@
                     <h5 class="card-title">Manage Documents</h5>
                     <p class="card-text">View, edit, and delete student documents.</p>
                     <a href="@Url.Action("ManageDocuments", "Student")" class="btn btn-light">Go</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">Progress</div>
+                <div class="card-body">
+                    <h5 class="card-title">View Progress</h5>
+                    <p class="card-text">View progress over time.</p>
+                    <a href="@Url.Action("ProgressOverTime", "Student")" class="btn btn-light">Go</a>
                 </div>
             </div>
         </div>

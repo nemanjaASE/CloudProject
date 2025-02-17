@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Common.Entities
+namespace Common.Models
 {
-	public class FileVersion
+	public class DocumentRead
 	{
-		public int Version { get; set; }
-		public string BlobPath { get; set; }
+		public string BlobPaths { get; set; }
+		public string CourseId { get; set; }
 	}
 }

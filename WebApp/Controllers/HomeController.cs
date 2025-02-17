@@ -1,29 +1,34 @@
-using System.Diagnostics;
+using Common.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using WebApp.Models;
 
 namespace WebApp.Controllers
 {
     [Authorize]
     public class HomeController : Controller
     {
-        [Authorize(Roles = "Administrator")]
+        [Authorize(Roles = Roles.Administrator)]
         public IActionResult Index()
         {
             return View();
         }
 
-		[Authorize(Roles = "Administrator")]
+		[Authorize(Roles = Roles.Administrator)]
 		public IActionResult AdminDashboard()
 		{
 			return View();
 		}
 
-		[Authorize(Roles = "Student")]
+		[Authorize(Roles = Roles.Student)]
 		public IActionResult StudentDashboard()
 		{
 			return View();
 		}
-    }
+
+		[Authorize(Roles = Roles.Professor)]
+		public IActionResult ProfessorDashboard()
+		{
+			return View();
+		}
+	}
 }

@@ -38,7 +38,12 @@
   <ItemGroup>
     <ProjectReference Include="..\AdministratorService\AdministratorService.csproj" />
     <ProjectReference Include="..\AuthService\AuthService.csproj" />
+    <ProjectReference Include="..\CourseServic\CourseServic.csproj" />
+    <ProjectReference Include="..\DocumentProcessingService\DocumentProcessingService.csproj" />
     <ProjectReference Include="..\DocumentService\DocumentService.csproj" />
+    <ProjectReference Include="..\AnalysisService\AnalysisService.csproj" />
+    <ProjectReference Include="..\ProcessingTimeEstimator\ProcessingTimeEstimator.csproj" />
+    <ProjectReference Include="..\ProfessorService\ProfessorService.csproj" />
     <ProjectReference Include="..\StudentService\StudentService.csproj" />
     <ProjectReference Include="..\UserService\UserService.csproj" />
     <ProjectReference Include="..\WebApp\WebApp.csproj">

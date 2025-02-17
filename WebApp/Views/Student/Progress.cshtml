@@ -1,0 +1,63 @@
+﻿@model DocumentViewModel
+
+<div class="progress-wrapper">
+    <h5 class="text-center mb-4">Progress Over Time</h5>
+
+    @if (Model.ProgressView != null && Model.ProgressView.Progress.Any())
+    {
+        <div class="progress-vertical-container d-flex justify-content-left">
+
+            <div class="score-line-container">
+                <div class="score-line score-line-0">0</div>
+
+                <div class="score-line score-line-5">5</div>
+
+                <div class="score-line score-line-10">10</div>
+            </div>
+            @foreach (var entry in Model.ProgressView.Progress)
+            {
+                var maxHeight = 300;
+                var progressHeight = (entry.Score / 10.0) * maxHeight;
+                <div class="text-center progress-item">
+                    <div class="progress-vertical"
+                         style="height: @(progressHeight)px;"
+                         aria-valuenow="@entry.Score"
+                         aria-valuemin="0"
+                         aria-valuemax="10"
+                         data-bs-toggle="tooltip"
+                         title="File Name: @entry.FileName &#10;Course Name: @entry.CourseName&#10;Professor: @entry.AuthorName &#10;Date: @entry.AnalysisDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm")">
+                        <span class="progress-label">@entry.Score</span>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="circle-container d-flex justify-content-center mt-5">
+            <div class="circle">
+                <span class="circle-value">@Model.ProgressView.TotalDocuments</span>
+                <span class="circle-label">Documents</span>
+            </div>
+            <div class="circle analyzed">
+                <span class="circle-value">@Model.ProgressView.NumOfAnalyzed</span>
+                <span class="circle-label">Analyzed</span>
+            </div>
+            <div class="circle not-analyzed">
+                <span class="circle-value">@Model.ProgressView.NumOfNotAnalyzed</span>
+                <span class="circle-label">NotAnalyzed</span>
+            </div>
+            <div class="circle in-progress">
+                <span class="circle-value">@Model.ProgressView.NumOfInProgress</span>
+                <span class="circle-label">InProgress</span>
+            </div>
+            <div class="circle avg-score">
+                <span class="circle-value">@Model.ProgressView.AverageScore / 10</span>
+                <span class="circle-label">Avg Score</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <p class="text-muted text-center">No progress data available.</p>
+    }
+</div>
+
