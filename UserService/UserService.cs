@@ -15,6 +15,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 using Microsoft.ServiceFabric.Data;
 using Common.Constants;
 using Common.Guard;
+using Common.Helpers;
 
 namespace UserService
 {

@@ -212,7 +212,7 @@ namespace CourseServic
 				using var tx = StateManager.CreateTransaction();
 
 				var existingCourses = await _courses.TryGetValueAsync(tx, course.AuthorId.ToString());
-
+				course.CourseId = Guid.Parse(entity.RowKey);
 				List<Course> updatedCourses = existingCourses.HasValue
 					? new List<Course>(existingCourses.Value) { course }
 					: [course];
