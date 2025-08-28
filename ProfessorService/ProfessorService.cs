@@ -125,7 +125,12 @@ namespace ProfessorService
 
 				if (documentInfos is null || documentInfos.Count.Equals(0)) { return []; }
 
-				return documentInfos.Where(di => coursesIds.Contains(di.CourseId.ToString())).ToList();
+				return documentInfos.Where(di => coursesIds.Contains(di.CourseId.ToString())).Select(di =>
+                {
+                    var course = courses.FirstOrDefault(c => c.CourseId == di.CourseId);
+                    di.CourseName = course?.Title; 
+                    return di;
+                }).ToList();
 			}
 			catch (Exception)
 			{

@@ -22,7 +22,7 @@ namespace ProcessingTimeEstimator
 
 		public async Task<double> EstimateTime(int textLength)
 		{
-			if (await HistoryCounter() == 0)
+			if (await HistoryIsEmpty())
 			{
 				return SimpleEstimate(textLength);
 			}
@@ -87,6 +87,17 @@ namespace ProcessingTimeEstimator
 
 			return counter;
 		}
+
+        private async Task<bool> HistoryIsEmpty()
+        {
+            _history = await StateManager.GetOrAddAsync<IReliableDictionary<int, double>>(HISTORY_DICTIONARY);
+
+            using var tx = StateManager.CreateTransaction();
+            var enumerable = await _history.CreateEnumerableAsync(tx);
+            using var enumerator = enumerable.GetAsyncEnumerator();
+
+            return !await enumerator.MoveNextAsync(default);
+        }
         protected override IEnumerable<ServiceReplicaListener> CreateServiceReplicaListeners()
         {
 			return

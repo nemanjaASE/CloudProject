@@ -31,7 +31,6 @@
             <th>Version</th>
             <th>Extension</th>
             <th>Student name:</th>
-            <th>Course Name</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -49,7 +48,6 @@
                     <td>@document.Version.0</td>
                     <td>@document.Extension</td>
                     <td>@document.StudentFirstName @document.StudentLastName</td>
-                    <td>@document.CourseName</td>
                     <td>
                         <a asp-action="Download"
                            asp-route-studentId="@document.StudentId"

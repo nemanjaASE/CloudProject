@@ -48,9 +48,9 @@ namespace UserService
 		{
 			try
 			{
-				var users = await _tableRepository.GetPagedAsync(tableName, page, pageSize, "Role", UserRole.Student.ToString());
+				var users = await _tableRepository.GetPagedAsync(tableName, page, pageSize, "PartitionKey", UserRole.Student.ToString());
 
-				int numOfUsers = await _tableRepository.GetTotalCountAsync(tableName, "Role", UserRole.Student.ToString());
+				int numOfUsers = await _tableRepository.GetTotalCountAsync(tableName, "PartitionKey", UserRole.Student.ToString());
 
 				return (_mapper.Map<List<User>>(users), numOfUsers);
 			}
